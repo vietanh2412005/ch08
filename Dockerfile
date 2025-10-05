@@ -1,14 +1,23 @@
-# Dùng Tomcat chính thức từ Docker Hub
+# Stage 1: Build WAR using Maven
+FROM maven:3.9.6-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copy toàn bộ project vào container
+COPY . .
+
+# Tạo file WAR (xuất ra thư mục target/)
+RUN mvn clean package -DskipTests
+
+# Stage 2: Deploy WAR vào Tomcat
 FROM tomcat:9.0-jdk17
+# Xóa webapps mặc định để tránh xung đột
+RUN rm -rf /usr/local/tomcat/webapps/*
 
-# Xóa webapp mặc định (ROOT)
-RUN rm -rf /usr/local/tomcat/webapps/ROOT
+# Copy file WAR từ stage build sang Tomcat
+COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
-# Copy file .war của bạn thành ROOT.war để Tomcat tự deploy
-COPY war-exports/ch08.war /usr/local/tomcat/webapps/ROOT.war
-
-# Expose cổng 8080 (Render sẽ tự map qua $PORT)
+# Mở port 8080
 EXPOSE 8080
 
-# Chạy Tomcat
+# Start Tomcat
 CMD ["catalina.sh", "run"]
